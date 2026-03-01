@@ -1,7 +1,8 @@
 import { getEmoticonId } from "../../core/utils";
 import { useFetchHook } from "../../hooks";
 import { originalFetch } from "../../hooks/useFetchHook";
-import { useArcaconStore } from "../../stores";
+import { useArcaconStore, useElementStore } from "../../stores";
+import FixerView from "./view";
 
 /*
   [Fixer 모듈]
@@ -9,6 +10,7 @@ import { useArcaconStore } from "../../stores";
 */
 export default function FixerModule() {
   const { getArcaconById, setArcaconItem } = useArcaconStore();
+  const { pickers } = useElementStore();
 
   useFetchHook(/\/b\/([^/]+)\/\d+\/comment/, async (args) => {
     const body = args[1]?.body;
@@ -69,5 +71,6 @@ export default function FixerModule() {
     }
     return originalFetch.apply(this, newArgs);
   });
-  return null;
+
+  return <FixerView pickers={pickers} />;
 }
