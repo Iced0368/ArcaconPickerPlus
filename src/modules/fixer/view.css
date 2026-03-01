@@ -1,5 +1,4 @@
 .refresh-btn {
-  background: #f5f6fa;
   color: #555;
   border: none;
   border-radius: 6px;
@@ -10,8 +9,4 @@
   span {
     margin-right: 4px;
   }
-}
-
-.refresh-btn:hover {
-  background: #e1e4e8;
 }

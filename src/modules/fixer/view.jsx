@@ -37,7 +37,8 @@ export default function FixerView({ pickers }) {
           .then((emoticonData) => {
             emoticonData.forEach((arcacon) => {
               if (getArcaconById(arcacon.id.toString(), true)) {
-                setArcaconItem({ ...arcacon, emoticonid: pack.id.toString() }, true);
+                const newItem = { ...arcacon, id: arcacon.id.toString(), emoticonid: pack.id.toString() };
+                setArcaconItem(newItem, true);
               }
             });
           })
@@ -53,7 +54,8 @@ export default function FixerView({ pickers }) {
 
     setIsLoading(false);
     setProgress(100);
-    console.log("[ArcaconPickerPlus] Arcacon data refresh completed.");
+    alert("[ArcaconPickerPlus] Arcacon data refresh completed.");
+    window.location.reload();
   };
 
   return (
