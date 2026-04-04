@@ -152,20 +152,6 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                 if (!isSortMode) return;
 
                 if (isTouchBrowser) {
-                  const dragSession = dragSessionRef.current;
-                  if (!dragSession || !draggingId) return;
-
-                  if (
-                    dragSession.trigger === "contextmenu" &&
-                    dragSession.awaitingTargetSelection &&
-                    dragSession.sourceId === item.id
-                  ) {
-                    return;
-                  }
-
-                  if (draggingId) {
-                    await reorderFromContextmenuSelection(item.id);
-                  }
                   return;
                 }
 
@@ -195,10 +181,19 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                 resetDragState();
               }}
               onClickCapture={(event) => {
-                if (isSortMode || suppressClickRef.current) {
+                if (suppressClickRef.current || (isSortMode && !isTouchBrowser)) {
                   event.preventDefault();
                   event.stopPropagation();
                 }
+              }}
+              onClick={async (event) => {
+                if (!isSortMode || !isTouchBrowser) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (!draggingId) return;
+                await reorderFromContextmenuSelection(item.id);
               }}
               onContextMenu={(event) => {
                 if (!isSortMode || !isTouchBrowser) return;
