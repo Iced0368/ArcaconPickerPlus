@@ -1,10 +1,9 @@
-import { createPortal } from "react-dom";
-
 import RefreshIcon from "../../assets/refresh-icon.svg?react";
 
 import "./view.css";
 import { useArcaconStore } from "../../stores";
 import { useState } from "react";
+import { PickerPortalList } from "../../core/utils";
 
 export default function FixerView({ pickers }) {
   const { getArcaconById, setArcaconItem } = useArcaconStore();
@@ -60,18 +59,18 @@ export default function FixerView({ pickers }) {
 
   return (
     <>
-      {pickers.map(
-        (picker) =>
-          picker.titleArea?.firstChild &&
-          createPortal(
-            <button className="refresh-btn" onClick={refreshArcacon} disabled={isLoading}>
-              <span>갱신</span>
-              <RefreshIcon />
-              {isLoading && <span style={{ marginLeft: 8 }}>{progress}%</span>}
-            </button>,
-            picker.titleArea.firstChild,
-          ),
-      )}
+      <PickerPortalList
+        pickers={pickers}
+        getTarget={(picker) => picker.titleArea?.firstChild}
+        getKey={(picker) => `fixer-${picker.uid}`}
+        render={() => (
+          <button className="refresh-btn" onClick={refreshArcacon} disabled={isLoading}>
+            <span>갱신</span>
+            <RefreshIcon />
+            {isLoading && <span style={{ marginLeft: 8 }}>{progress}%</span>}
+          </button>
+        )}
+      />
     </>
   );
 }

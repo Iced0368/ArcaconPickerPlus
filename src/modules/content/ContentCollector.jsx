@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { useElementStore, useArcaconStore } from "../../stores";
-import { useEventListener } from "../../hooks";
+import { useEventListener, useFetchHook } from "../../hooks";
+import { originalFetch } from "../../hooks/useFetchHook";
+import { getThumbnailArcaconItem } from "../../core/utils";
 
 // .arcaconPicker 요소를 감지해 store에 저장하는 컴포넌트
 export default function ContentCollector() {
   const { setArcaconPicker, setThumbnailWraps } = useElementStore();
-  const { loadArcaconItems, setArcaconItem } = useArcaconStore();
+  const { loadArcaconItems, setArcaconItem, refreshArcaconItemsByEmoticonData } = useArcaconStore();
 
   const getChildElements = (picker) => {
     // 고유 id 부여
@@ -24,14 +26,9 @@ export default function ContentCollector() {
 
   // 렌더링 된 아카콘 데이터 저장
   const saveArcaconItem = (thumb) => {
-    if (!thumb) return;
-    const id = thumb.getAttribute("data-attachment-id"),
-      emoticonid = thumb.getAttribute("data-emoticon-id"),
-      imageUrl = thumb.getAttribute("data-src"),
-      type = thumb.getAttribute("data-type"),
-      poster = thumb.getAttribute("data-poster"),
-      orig = thumb.getAttribute("data-orig");
-    setArcaconItem({ id, emoticonid, imageUrl, type, poster, orig }, false);
+    const arcaconItem = getThumbnailArcaconItem(thumb);
+    if (!arcaconItem?.id) return;
+    setArcaconItem(arcaconItem, false);
   };
 
   useEventListener(
@@ -45,6 +42,23 @@ export default function ContentCollector() {
     },
     document,
   );
+
+  useFetchHook(/\/api\/emoticon2\/(\d+)(?:\?|$)/, async (args, emoticonid) => {
+    const response = await originalFetch.apply(this, args);
+
+    try {
+      const responseData = await response.clone().json();
+      await refreshArcaconItemsByEmoticonData(emoticonid, responseData);
+    } catch (error) {
+      console.error(
+        "[ArcaconPickerPlus] Failed to refresh arcacon items from emoticon API response: ",
+        emoticonid,
+        error,
+      );
+    }
+
+    return response;
+  });
 
   useEffect(() => {
     loadArcaconItems();

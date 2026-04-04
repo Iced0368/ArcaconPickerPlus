@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useArcaconStore, useMemoStore } from "../../stores";
+import { useArcaconStore, useFavoriteStore, useMemoStore } from "../../stores";
 
 import MemoController from "./controller";
 import MemoView from "./view";
@@ -11,6 +11,7 @@ import MemoView from "./view";
 
 export default function MemoModule() {
   const { loadMemoItems, getMemoById, setMemoItem, deleteMemoItem } = useMemoStore();
+  const { addFavoriteItem, removeFavoriteItem } = useFavoriteStore();
   const { setPermanent } = useArcaconStore();
 
   const [currentMemoId, setCurrentMemoId] = useState(null);
@@ -42,6 +43,18 @@ export default function MemoModule() {
     setPermanent(id);
   }, []);
 
+  const toggleFavorite = useCallback((id, isFavorite) => {
+    if (!id) return;
+
+    if (isFavorite) {
+      removeFavoriteItem(id);
+      return;
+    }
+
+    addFavoriteItem(id);
+    setPermanent(id);
+  }, []);
+
   return (
     <>
       <MemoView
@@ -51,6 +64,7 @@ export default function MemoModule() {
         closeMemo={closeMemo}
         saveMemo={saveMemo}
         removeMemo={deleteMemoItem}
+        toggleFavorite={toggleFavorite}
       />
       <MemoController openMemo={openMemo} />
     </>

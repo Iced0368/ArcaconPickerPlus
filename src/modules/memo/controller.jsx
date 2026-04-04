@@ -1,4 +1,5 @@
 import { useEventListener } from "../../hooks";
+import { getThumbnailAttachmentId } from "../../core/utils";
 
 export default function MemoController({ openMemo }) {
   // .thumbnail-wrap에서 우클릭
@@ -9,7 +10,7 @@ export default function MemoController({ openMemo }) {
       if (!target) return;
       e.preventDefault();
 
-      const id = target.getAttribute("data-attachment-id");
+      const id = getThumbnailAttachmentId(target);
       openMemo(id);
     },
     document,

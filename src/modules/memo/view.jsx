@@ -1,17 +1,25 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect } from "react";
 import MemoFragment from "./fragment/MemoFragment";
-import { useElementStore } from "../../stores";
-import { createPortal } from "react-dom";
-import { getOverlay } from "../content";
+import { getThumbnailAttachmentId } from "../../core/utils";
+import { ThumbnailOverlayPortal } from "../content";
 
 import MemoIcon from "../../assets/memo-icon.svg?react";
+import useFavoriteStore from "../../stores/favorite";
 import useMemoStore from "../../stores/memo";
 
 import "./arcacon-memo-overlay.css";
 
-export default function MemoView({ memoVisible, currentMemoId, openMemo, closeMemo, saveMemo, removeMemo }) {
+export default function MemoView({
+  memoVisible,
+  currentMemoId,
+  openMemo,
+  closeMemo,
+  saveMemo,
+  removeMemo,
+  toggleFavorite,
+}) {
   const { getMemoById } = useMemoStore();
-  const { thumbnailWraps } = useElementStore();
+  const { favorites, isFavorite } = useFavoriteStore();
   const [memoText, setMemoText] = useState("");
 
   useEffect(() => {
@@ -25,11 +33,14 @@ export default function MemoView({ memoVisible, currentMemoId, openMemo, closeMe
     return getMemoById(id) !== null;
   };
 
+  const currentFavorite = currentMemoId ? isFavorite(currentMemoId) : false;
+
   return (
     <>
       <MemoFragment
         visible={memoVisible}
         text={memoText}
+        isFavorite={currentFavorite}
         onChange={(e) => setMemoText(e.target.value)}
         onClose={() => {
           setMemoText("");
@@ -45,24 +56,15 @@ export default function MemoView({ memoVisible, currentMemoId, openMemo, closeMe
           setMemoText("");
           closeMemo();
         }}
+        onToggleFavorite={() => toggleFavorite(currentMemoId, currentFavorite)}
       />
-      {
-        // 메모 아이콘 오버레이
-        thumbnailWraps.map((node) => {
-          if (!node) return null;
-          const id = node.getAttribute("data-attachment-id");
-          if (!isMemoed(id)) return null;
-          const overlay = getOverlay(node);
-          if (!overlay) return null;
-
-          return createPortal(
-            <div className="arcacon-overlay memo">
-              <MemoIcon />
-            </div>,
-            overlay,
-          );
-        })
-      }
+      <ThumbnailOverlayPortal shouldRender={(_node, id) => isMemoed(id)}>
+        {(node, id) => (
+          <div className="arcacon-overlay memo" data-attachment-id={getThumbnailAttachmentId(node) || id}>
+            <MemoIcon />
+          </div>
+        )}
+      </ThumbnailOverlayPortal>
     </>
   );
 }

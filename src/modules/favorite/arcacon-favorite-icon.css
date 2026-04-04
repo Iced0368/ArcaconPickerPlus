@@ -2,6 +2,28 @@
   background: #ef4444;
 }
 
+.favorite-thumbnail-wrap {
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.favorite-thumbnails.sort-mode .favorite-thumbnail-wrap {
+  cursor: grab;
+  touch-action: none;
+}
+
+.favorite-thumbnail-wrap.dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+  z-index: 1;
+}
+
+.favorite-thumbnail-wrap.drag-over {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
 .arcacon-favorite-overlay svg {
   width: 14px;
   height: 14px;

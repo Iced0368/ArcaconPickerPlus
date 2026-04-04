@@ -1,4 +1,4 @@
 import ContentCollector from "./ContentCollector";
-import ThumbnailOverlay, { getOverlay } from "./ThumbnailOverlay";
+import ThumbnailOverlay, { getOverlay, ThumbnailOverlayPortal } from "./ThumbnailOverlay";
 
-export { ContentCollector, ThumbnailOverlay, getOverlay };
+export { ContentCollector, ThumbnailOverlay, getOverlay, ThumbnailOverlayPortal };

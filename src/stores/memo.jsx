@@ -1,35 +1,61 @@
 import { create } from "zustand";
 import { STORAGE_MEMO_DATA } from "../core/constants/config";
-import { getDatabase, loadData, saveData, deleteData } from "./persistent";
+import { batchDeleteData, getDatabase } from "./persistent";
+import { loadTableItems, upsertTableItem, removeTableItem } from "./tablePersistence";
 
 import GenericTable from "../core/utils/GenericTable";
-import { removeArcaconIfUnreferenced } from "./arcacon";
+import { removeArcaconIfUnreferenced } from "./arcaconRelations";
 
 const memoIDBTable = getDatabase(STORAGE_MEMO_DATA);
+const memoTable = new GenericTable("id", ["id", "text"]);
+
+let isMemoStoreLoaded = false;
+
+export async function removeMemoItems(ids) {
+  const normalizedIds = ids.map((id) => id?.toString()).filter(Boolean);
+  if (normalizedIds.length === 0) return;
+
+  normalizedIds.forEach((id) => {
+    memoTable.delete(id);
+  });
+  await batchDeleteData(memoIDBTable, normalizedIds);
+
+  if (isMemoStoreLoaded) {
+    useMemoStore.setState({ memoItems: memoTable.getAll() });
+  }
+}
 
 const useMemoStore = create((set) => {
-  const memoTable = new GenericTable("id", ["id", "text"]);
-
   async function loadMemoItems() {
-    const data = (await loadData(memoIDBTable)) || [];
-    memoTable.load(data);
-    set({ memoItems: memoTable.getAll() });
-
-    console.log("[ArcaconPickerPlus] Loaded memo items: ", data.length, "items loaded.");
+    await loadTableItems({
+      dbTable: memoIDBTable,
+      table: memoTable,
+      set,
+      stateKey: "memoItems",
+      logLabel: "memo items",
+    });
+    isMemoStoreLoaded = true;
   }
 
   function setMemoItem(id, text) {
-    memoTable.insert({ id, text });
-    saveData(memoIDBTable, { id, text });
-    set({ memoItems: memoTable.getAll() });
+    upsertTableItem({
+      dbTable: memoIDBTable,
+      table: memoTable,
+      item: { id, text },
+      set,
+      stateKey: "memoItems",
+    });
   }
 
   function deleteMemoItem(id) {
-    memoTable.delete(id);
-    deleteData(memoIDBTable, id).then(() => {
-      removeArcaconIfUnreferenced(id);
+    removeTableItem({
+      dbTable: memoIDBTable,
+      table: memoTable,
+      id,
+      set,
+      stateKey: "memoItems",
+      afterDelete: removeArcaconIfUnreferenced,
     });
-    set({ memoItems: memoTable.getAll() });
   }
 
   return {

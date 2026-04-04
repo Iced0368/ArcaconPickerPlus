@@ -1,10 +1,11 @@
 import { useEffect } from "react";
+import { getThumbnailAttachmentId } from "../../core/utils";
 
 export default function FavoriteController({ pickers, getToggleValue, onClickFavorite }) {
   const handleClick = (uid) => (e) => {
     const target = e.target.closest(".thumbnail-wrap");
     if (target) {
-      const id = target.getAttribute("data-attachment-id");
+      const id = getThumbnailAttachmentId(target);
       const toggleOn = !!getToggleValue(uid);
       if (toggleOn) {
         e.stopPropagation();
