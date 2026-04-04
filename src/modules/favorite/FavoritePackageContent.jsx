@@ -32,6 +32,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
       hasDragged: true,
       pointerId: null,
       trigger: "contextmenu",
+      awaitingTargetSelection: true,
     };
     startPointerDrag(itemId);
     markSuppressClick();
@@ -83,6 +84,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
       hasDragged: true,
       pointerId: null,
       trigger: "contextmenu",
+      awaitingTargetSelection: false,
     };
 
     await finalizePointerDrag();
@@ -150,6 +152,17 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                 if (!isSortMode) return;
 
                 if (isTouchBrowser) {
+                  const dragSession = dragSessionRef.current;
+                  if (!dragSession || !draggingId) return;
+
+                  if (
+                    dragSession.trigger === "contextmenu" &&
+                    dragSession.awaitingTargetSelection &&
+                    dragSession.sourceId === item.id
+                  ) {
+                    return;
+                  }
+
                   if (draggingId) {
                     await reorderFromContextmenuSelection(item.id);
                   }
@@ -166,6 +179,11 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                 if (!isSortMode) return;
 
                 if (isTouchBrowser) {
+                  const dragSession = dragSessionRef.current;
+                  if (dragSession?.trigger === "contextmenu" && dragSession.awaitingTargetSelection) {
+                    return;
+                  }
+
                   resetDragState();
                   return;
                 }
