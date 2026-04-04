@@ -93,6 +93,13 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
   return (
     <>
       <span className="package-title">{title}</span>
+      {isSortMode && isTouchBrowser && (
+        <div className="favorite-sort-guide" role="status" aria-live="polite">
+          {draggingId
+            ? "선택됨. 이동할 위치의 아카콘을 탭하세요."
+            : "순서를 바꿀 아카콘을 길게 눌러 선택하세요."}
+        </div>
+      )}
       <div className={`thumbnails favorite-thumbnails${isSortMode ? " sort-mode" : ""}`}>
         {items.map((item) => {
           if (!item) return null;
@@ -226,6 +233,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   data-attachmentid={item.id || ""}
                 />
               )}
+              {isTouchBrowser && isDragging && <div className="favorite-sort-badge">선택됨</div>}
             </div>
           );
         })}
