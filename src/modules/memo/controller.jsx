@@ -8,6 +8,12 @@ export default function MemoController({ openMemo }) {
     (e) => {
       const target = e.target.closest(".thumbnail-wrap");
       if (!target) return;
+
+      const isFavoriteSortMode = document.documentElement.dataset.arcaconFavoriteSortMode === "on";
+      if (isFavoriteSortMode && target.closest(".favorite-thumbnail-wrap")) {
+        return;
+      }
+
       e.preventDefault();
 
       const id = getThumbnailAttachmentId(target);

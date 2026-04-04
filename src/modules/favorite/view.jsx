@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PackageItem } from "../../core/fragment";
 import { FAVORITE_PACKAGE_ID } from "../../core/constants/config";
 import { useArcaconStore } from "../../stores";
@@ -24,6 +24,14 @@ export default function FavoriteView({ pickers }) {
   const [isSortMode, setIsSortMode] = useState(false);
 
   const favoriteItems = getArcaconItemsByIds(favorites.map((fav) => fav.id));
+
+  useEffect(() => {
+    document.documentElement.dataset.arcaconFavoriteSortMode = isSortMode ? "on" : "off";
+
+    return () => {
+      delete document.documentElement.dataset.arcaconFavoriteSortMode;
+    };
+  }, [isSortMode]);
 
   return (
     <>
