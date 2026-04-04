@@ -5,6 +5,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
   const [dragOverId, setDragOverId] = useState(null);
   const dragSessionRef = useRef(null);
   const suppressClickRef = useRef(false);
+  const isTouchBrowser = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
 
   const resetDragState = () => {
     dragSessionRef.current = null;
@@ -15,6 +16,25 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
   const startPointerDrag = (itemId) => {
     setDraggingId(itemId);
     setDragOverId(null);
+  };
+
+  const markSuppressClick = () => {
+    suppressClickRef.current = true;
+    setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+  };
+
+  const startContextmenuSort = (itemId) => {
+    dragSessionRef.current = {
+      sourceId: itemId,
+      dragOverId: null,
+      hasDragged: true,
+      pointerId: null,
+      trigger: "contextmenu",
+    };
+    startPointerDrag(itemId);
+    markSuppressClick();
   };
 
   useEffect(() => {
@@ -40,14 +60,32 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
     if (!dragSession) return;
 
     if (dragSession.hasDragged && dragSession.dragOverId && dragSession.dragOverId !== dragSession.sourceId) {
-      suppressClickRef.current = true;
+      markSuppressClick();
       await onReorder(dragSession.sourceId, dragSession.dragOverId);
-      setTimeout(() => {
-        suppressClickRef.current = false;
-      }, 0);
     }
 
     resetDragState();
+  };
+
+  const reorderFromContextmenuSelection = async (targetId) => {
+    const sourceId = dragSessionRef.current?.sourceId || draggingId;
+    if (!sourceId) return;
+
+    if (sourceId === targetId) {
+      resetDragState();
+      return;
+    }
+
+    setDragOverId(targetId);
+    dragSessionRef.current = {
+      sourceId,
+      dragOverId: targetId,
+      hasDragged: true,
+      pointerId: null,
+      trigger: "contextmenu",
+    };
+
+    await finalizePointerDrag();
   };
 
   return (
@@ -72,7 +110,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
               data-orig={item.orig || ""}
               draggable={false}
               onPointerDown={(event) => {
-                if (!isSortMode || !event.isPrimary) return;
+                if (!isSortMode || !event.isPrimary || isTouchBrowser) return;
 
                 dragSessionRef.current = {
                   pointerId: event.pointerId,
@@ -86,7 +124,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                 event.currentTarget.setPointerCapture?.(event.pointerId);
               }}
               onPointerMove={(event) => {
-                if (!isSortMode) return;
+                if (!isSortMode || isTouchBrowser) return;
 
                 const dragSession = dragSessionRef.current;
                 if (!dragSession || dragSession.pointerId !== event.pointerId) return;
@@ -111,6 +149,13 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
               onPointerUp={async (event) => {
                 if (!isSortMode) return;
 
+                if (isTouchBrowser) {
+                  if (draggingId) {
+                    await reorderFromContextmenuSelection(item.id);
+                  }
+                  return;
+                }
+
                 const dragSession = dragSessionRef.current;
                 if (!dragSession || dragSession.pointerId !== event.pointerId) return;
 
@@ -119,6 +164,11 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
               }}
               onPointerCancel={(event) => {
                 if (!isSortMode) return;
+
+                if (isTouchBrowser) {
+                  resetDragState();
+                  return;
+                }
 
                 const dragSession = dragSessionRef.current;
                 if (!dragSession || dragSession.pointerId !== event.pointerId) return;
@@ -131,6 +181,13 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   event.preventDefault();
                   event.stopPropagation();
                 }
+              }}
+              onContextMenu={(event) => {
+                if (!isSortMode || !isTouchBrowser) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+                startContextmenuSort(item.id);
               }}
             >
               {item.type === "video" ? (
