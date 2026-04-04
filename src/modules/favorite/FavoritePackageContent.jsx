@@ -1,21 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function FavoritePackageContent({ title, items, onReorder, isSortMode }) {
-  const [draggingId, setDraggingId] = useState(null);
-  const [dragOverId, setDragOverId] = useState(null);
-  const dragSessionRef = useRef(null);
+  const [selectedId, setSelectedId] = useState(null);
   const suppressClickRef = useRef(false);
-  const isTouchBrowser = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
 
   const resetDragState = () => {
-    dragSessionRef.current = null;
-    setDraggingId(null);
-    setDragOverId(null);
-  };
-
-  const startPointerDrag = (itemId) => {
-    setDraggingId(itemId);
-    setDragOverId(null);
+    setSelectedId(null);
   };
 
   const markSuppressClick = () => {
@@ -25,85 +15,66 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
     }, 0);
   };
 
-  const startContextmenuSort = (itemId) => {
-    dragSessionRef.current = {
-      sourceId: itemId,
-      dragOverId: null,
-      hasDragged: true,
-      pointerId: null,
-      trigger: "contextmenu",
-      awaitingTargetSelection: true,
-    };
-    startPointerDrag(itemId);
-    markSuppressClick();
-  };
-
   useEffect(() => {
     if (!isSortMode) {
       resetDragState();
     }
   }, [isSortMode]);
 
-  const updateDragTarget = (clientX, clientY, sourceId) => {
-    const hoveredItem = document.elementFromPoint(clientX, clientY)?.closest(".favorite-thumbnail-wrap");
-    const targetId = hoveredItem?.getAttribute("data-attachment-id") || null;
+  useEffect(() => {
+    if (!isSortMode || !selectedId) return;
 
-    if (!targetId || targetId === sourceId) {
-      setDragOverId(null);
-      return;
-    }
-
-    setDragOverId(targetId);
-  };
-
-  const finalizePointerDrag = async () => {
-    const dragSession = dragSessionRef.current;
-    if (!dragSession) return;
-
-    if (dragSession.hasDragged && dragSession.dragOverId && dragSession.dragOverId !== dragSession.sourceId) {
-      markSuppressClick();
-      await onReorder(dragSession.sourceId, dragSession.dragOverId);
-    }
-
-    resetDragState();
-  };
-
-  const reorderFromContextmenuSelection = async (targetId) => {
-    const sourceId = dragSessionRef.current?.sourceId || draggingId;
-    if (!sourceId) return;
-
-    if (sourceId === targetId) {
+    const handleDocumentClick = (event) => {
+      if (event.target.closest(".favorite-thumbnail-wrap")) return;
       resetDragState();
-      return;
-    }
-
-    setDragOverId(targetId);
-    dragSessionRef.current = {
-      sourceId,
-      dragOverId: targetId,
-      hasDragged: true,
-      pointerId: null,
-      trigger: "contextmenu",
-      awaitingTargetSelection: false,
     };
 
-    await finalizePointerDrag();
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [isSortMode, selectedId]);
+
+  const handleSelectOrReorder = async (itemId) => {
+    if (!isSortMode) return;
+
+    if (!selectedId) {
+      setSelectedId(itemId);
+      markSuppressClick();
+      return;
+    }
+
+    if (selectedId === itemId) {
+      resetDragState();
+      markSuppressClick();
+      return;
+    }
+
+    markSuppressClick();
+    await onReorder(selectedId, itemId);
+    resetDragState();
   };
 
   return (
     <>
       <span className="package-title">{title}</span>
+      {isSortMode && (
+        <div className="favorite-sort-guide" role="status" aria-live="polite">
+          {selectedId
+            ? "선택됨. 이동할 위치의 아카콘을 눌러 순서를 바꾸세요."
+            : "순서를 바꿀 아카콘을 눌러 선택하세요."}
+        </div>
+      )}
       <div className={`thumbnails favorite-thumbnails${isSortMode ? " sort-mode" : ""}`}>
         {items.map((item) => {
           if (!item) return null;
 
-          const isDragging = draggingId === item.id;
-          const isDragOver = dragOverId === item.id && draggingId !== item.id;
+          const isDragging = selectedId === item.id;
 
           return (
             <div
               key={`thumbnail-wrap-favorite-${item.id}`}
-              className={`thumbnail-wrap loading favorite-thumbnail-wrap${isDragging ? " dragging" : ""}${isDragOver ? " drag-over" : ""}`}
+              className={`thumbnail-wrap loading favorite-thumbnail-wrap${isDragging ? " dragging" : ""}`}
               data-type={item.type || ""}
               data-src={item.imageUrl || ""}
               data-emoticon-id={item.emoticonid || ""}
@@ -111,96 +82,24 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
               data-poster={item.poster || ""}
               data-orig={item.orig || ""}
               draggable={false}
-              onPointerDown={(event) => {
-                if (!isSortMode || !event.isPrimary || isTouchBrowser) return;
-
-                dragSessionRef.current = {
-                  pointerId: event.pointerId,
-                  sourceId: item.id,
-                  dragOverId: null,
-                  hasDragged: false,
-                  startX: event.clientX,
-                  startY: event.clientY,
-                };
-
-                event.currentTarget.setPointerCapture?.(event.pointerId);
-              }}
-              onPointerMove={(event) => {
-                if (!isSortMode || isTouchBrowser) return;
-
-                const dragSession = dragSessionRef.current;
-                if (!dragSession || dragSession.pointerId !== event.pointerId) return;
-
-                const distanceX = event.clientX - dragSession.startX;
-                const distanceY = event.clientY - dragSession.startY;
-                const hasPassedThreshold = Math.abs(distanceX) > 8 || Math.abs(distanceY) > 8;
-
-                if (!dragSession.hasDragged) {
-                  if (!hasPassedThreshold) return;
-                  dragSession.hasDragged = true;
-                  startPointerDrag(dragSession.sourceId);
-                }
-
-                event.preventDefault();
-                updateDragTarget(event.clientX, event.clientY, dragSession.sourceId);
-                dragSession.dragOverId = document
-                  .elementFromPoint(event.clientX, event.clientY)
-                  ?.closest(".favorite-thumbnail-wrap")
-                  ?.getAttribute("data-attachment-id");
-              }}
-              onPointerUp={async (event) => {
-                if (!isSortMode) return;
-
-                if (isTouchBrowser) {
-                  return;
-                }
-
-                const dragSession = dragSessionRef.current;
-                if (!dragSession || dragSession.pointerId !== event.pointerId) return;
-
-                event.currentTarget.releasePointerCapture?.(event.pointerId);
-                await finalizePointerDrag();
-              }}
-              onPointerCancel={(event) => {
-                if (!isSortMode) return;
-
-                if (isTouchBrowser) {
-                  const dragSession = dragSessionRef.current;
-                  if (dragSession?.trigger === "contextmenu" && dragSession.awaitingTargetSelection) {
-                    return;
-                  }
-
-                  resetDragState();
-                  return;
-                }
-
-                const dragSession = dragSessionRef.current;
-                if (!dragSession || dragSession.pointerId !== event.pointerId) return;
-
-                event.currentTarget.releasePointerCapture?.(event.pointerId);
-                resetDragState();
-              }}
               onClickCapture={(event) => {
-                if (suppressClickRef.current || (isSortMode && !isTouchBrowser)) {
+                if (isSortMode) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  void handleSelectOrReorder(item.id);
+                  return;
+                }
+
+                if (suppressClickRef.current) {
                   event.preventDefault();
                   event.stopPropagation();
                 }
               }}
-              onClick={async (event) => {
-                if (!isSortMode || !isTouchBrowser) return;
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                if (!draggingId) return;
-                await reorderFromContextmenuSelection(item.id);
-              }}
               onContextMenu={(event) => {
-                if (!isSortMode || !isTouchBrowser) return;
+                if (!isSortMode) return;
 
                 event.preventDefault();
                 event.stopPropagation();
-                startContextmenuSort(item.id);
               }}
             >
               {item.type === "video" ? (
@@ -226,6 +125,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   data-attachmentid={item.id || ""}
                 />
               )}
+              {isDragging && <div className="favorite-sort-badge">선택됨</div>}
             </div>
           );
         })}

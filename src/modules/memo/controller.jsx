@@ -6,9 +6,8 @@ export default function MemoController({ openMemo }) {
   useEventListener(
     "contextmenu",
     (e) => {
-      const isTouchBrowser = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
       const isFavoriteSortMode = document.documentElement.dataset.arcaconFavoriteSortMode === "on";
-      if (isTouchBrowser && isFavoriteSortMode) {
+      if (isFavoriteSortMode) {
         return;
       }
 
