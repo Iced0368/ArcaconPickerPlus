@@ -1,14 +1,16 @@
-import { Modal, PackageContent, PackageItem } from "../../core/fragment";
+import { useEffect, useState } from "react";
+import { PackageItem } from "../../core/fragment";
 import { FAVORITE_PACKAGE_ID } from "../../core/constants/config";
-import { useArcaconStore, useElementStore } from "../../stores";
-import { createPortal } from "react-dom";
-import { getOverlay } from "../content/ThumbnailOverlay";
+import { useArcaconStore } from "../../stores";
+import { getThumbnailAttachmentId } from "../../core/utils";
+import { ThumbnailOverlayPortal } from "../content/ThumbnailOverlay";
 
 import FavoriteIcon from "../../assets/favorite-icon.svg?react";
+import FavoritePackageContent from "./FavoritePackageContent";
 
 import "./arcacon-favorite-icon.css";
 import useFavoriteStore from "../../stores/favorite";
-import { PortalAhead } from "../../core/utils";
+import { PickerAheadPortalList } from "../../core/utils";
 
 const STAR_SVG_DATA_URL =
   "data:image/svg+xml;utf8," +
@@ -16,110 +18,89 @@ const STAR_SVG_DATA_URL =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="#FFD600"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg>',
   );
 
-export default function FavoriteView({
-  pickers,
-  getToggleValue,
-  toggleFavorite,
-  showFavoriteModal,
-  onModalConfirm,
-  onModalCancel,
-}) {
-  const { favorites, isFavorite } = useFavoriteStore();
-  const { thumbnailWraps } = useElementStore();
-  const { getArcaconById } = useArcaconStore();
+export default function FavoriteView({ pickers }) {
+  const { favorites, isFavorite, reorderFavoriteItems } = useFavoriteStore();
+  const { getArcaconItemsByIds } = useArcaconStore();
+  const [isSortMode, setIsSortMode] = useState(false);
+
+  const favoriteItems = getArcaconItemsByIds(favorites.map((fav) => fav.id));
+
+  useEffect(() => {
+    document.documentElement.dataset.arcaconFavoriteSortMode = isSortMode ? "on" : "off";
+
+    return () => {
+      delete document.documentElement.dataset.arcaconFavoriteSortMode;
+    };
+  }, [isSortMode]);
 
   return (
     <>
       {
         // 아카콘 패키지 선택 버튼
-        pickers.map(
-          (picker) =>
-            picker.content?.firstChild && (
-              <PortalAhead
-                key={`content-${picker.uid}`}
-                target={picker.content.firstChild}
-                className="--package-wrap"
-                data-package-id={FAVORITE_PACKAGE_ID}
-              >
-                <PackageContent items={favorites.map((fav) => getArcaconById(fav.id))} title="즐겨찾기" />
-              </PortalAhead>
-            ),
-        )
+        <PickerAheadPortalList
+          pickers={pickers}
+          getTarget={(picker) => picker.optionsToolbar?.firstChild}
+          getKey={(picker) => `sort-toggle-${picker.uid}`}
+          getPortalProps={() => ({
+            fragment: "label",
+            className: "option-combo-emoticon visible",
+            id: "favorite-sort-toggle-button",
+          })}
+          render={() => (
+            <>
+              정렬 토글
+              <input
+                type="checkbox"
+                name="option-favorite-sort"
+                checked={isSortMode}
+                onChange={() => setIsSortMode((current) => !current)}
+              />
+            </>
+          )}
+        />
+      }
+      {
+        // 아카콘 패키지 선택 버튼
+        <PickerAheadPortalList
+          pickers={pickers}
+          getTarget={(picker) => picker.content?.firstChild}
+          getKey={(picker) => `content-${picker.uid}`}
+          getPortalProps={() => ({
+            className: "--package-wrap",
+            "data-package-id": FAVORITE_PACKAGE_ID,
+          })}
+          render={() => (
+            <FavoritePackageContent
+              items={favoriteItems}
+              title="즐겨찾기"
+              onReorder={reorderFavoriteItems}
+              isSortMode={isSortMode}
+            />
+          )}
+        />
       }
       {
         // 아카콘 패키지 아이템 표시
-        pickers.map(
-          (picker) =>
-            picker.sidebar?.firstChild && (
-              <PortalAhead
-                key={`item-${picker.uid}`}
-                target={picker.sidebar.firstChild}
-                className="package-item"
-                data-package-id={FAVORITE_PACKAGE_ID}
-                data-package-name="즐겨찾기"
-                title="즐겨찾기"
-              >
-                <PackageItem id={FAVORITE_PACKAGE_ID} title="즐겨찾기" imgUrl={STAR_SVG_DATA_URL} />
-              </PortalAhead>
-            ),
-        )
+        <PickerAheadPortalList
+          pickers={pickers}
+          getTarget={(picker) => picker.sidebar?.firstChild}
+          getKey={(picker) => `item-${picker.uid}`}
+          getPortalProps={() => ({
+            className: "package-item",
+            "data-package-id": FAVORITE_PACKAGE_ID,
+            "data-package-name": "즐겨찾기",
+            title: "즐겨찾기",
+          })}
+          render={() => <PackageItem id={FAVORITE_PACKAGE_ID} title="즐겨찾기" imgUrl={STAR_SVG_DATA_URL} />}
+        />
       }
-      {
-        // 즐겨찾기 토글 버튼 표시
-        pickers.map(
-          (picker) =>
-            picker.optionsToolbar?.firstChild && (
-              <PortalAhead
-                fragment="label"
-                key={`toggle-${picker.uid}`}
-                target={picker.optionsToolbar.firstChild}
-                className="option-combo-emoticon visible"
-                id="favorite-toggle-button"
-              >
-                즐겨찾기 토글
-                <input
-                  type="checkbox"
-                  name="option-favorite-emoticon"
-                  checked={getToggleValue(picker.uid) || false}
-                  onChange={() => toggleFavorite(picker.uid)}
-                />
-              </PortalAhead>
-            ),
-        )
-      }
-      {
-        // 즐겨찾기 아이콘 오버레이
-        thumbnailWraps.map((node) => {
-          if (!node) return null;
-          const id = node.getAttribute("data-attachment-id");
-          if (!isFavorite(id)) return null;
-          const overlay = getOverlay(node);
-          if (!overlay) return null;
-
-          return createPortal(
-            <div className="arcacon-overlay favorite">
-              <FavoriteIcon />
-            </div>,
-            overlay,
-          );
-        })
-      }
-      {
-        // 즐겨찾기 클릭 시 1회 노출 모달
-        showFavoriteModal && (
-          <Modal>
-            <Modal.Title>확인</Modal.Title>
-            <Modal.Content>
-              <div>즐겨찾기를 제거하시겠습니까?</div>
-              <div>이 창은 한 번만 표시됩니다.</div>
-            </Modal.Content>
-            <Modal.Buttons>
-              <button onClick={onModalConfirm}>확인</button>
-              <button onClick={onModalCancel}>취소</button>
-            </Modal.Buttons>
-          </Modal>
-        )
-      }
+      <ThumbnailOverlayPortal shouldRender={(_node, id) => isFavorite(id)}>
+        {(_node, id) => (
+          <div className="arcacon-overlay favorite" data-attachment-id={getThumbnailAttachmentId(_node) || id}>
+            <FavoriteIcon />
+          </div>
+        )}
+      </ThumbnailOverlayPortal>
     </>
   );
 }

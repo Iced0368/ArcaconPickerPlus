@@ -2,9 +2,74 @@
   background: #ef4444;
 }
 
+.favorite-thumbnail-wrap {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.favorite-sort-guide {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.favorite-thumbnails.sort-mode .favorite-thumbnail-wrap {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.favorite-thumbnail-wrap.dragging {
+  opacity: 0.9;
+  cursor: pointer;
+  z-index: 1;
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.18);
+}
+
+.favorite-thumbnail-wrap.drag-over {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+.favorite-sort-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(154, 52, 18, 0.92);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .arcacon-favorite-overlay svg {
   width: 14px;
   height: 14px;
   fill: #ef4444;
   display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  .favorite-sort-guide {
+    background: rgba(249, 115, 22, 0.14);
+    color: #fdba74;
+  }
+
+  .favorite-thumbnail-wrap.dragging {
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.24);
+  }
+
+  .favorite-sort-badge {
+    background: rgba(194, 65, 12, 0.95);
+  }
 }

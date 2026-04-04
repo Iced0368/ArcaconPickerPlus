@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useElementStore } from "../../stores";
+import { getThumbnailAttachmentId } from "../../core/utils";
 
 import "./overlay.css";
 
@@ -24,4 +25,24 @@ export default function ThumbnailOverlay() {
 export function getOverlay(node) {
   if (!node) return null;
   return node.querySelector(".arcacon-overlay-list");
+}
+
+export function ThumbnailOverlayPortal({ shouldRender, children }) {
+  const { thumbnailWraps } = useElementStore();
+
+  return (
+    <>
+      {thumbnailWraps.map((node) => {
+        if (!node) return null;
+
+        const id = getThumbnailAttachmentId(node);
+        if (!shouldRender(node, id)) return null;
+
+        const overlay = getOverlay(node);
+        if (!overlay) return null;
+
+        return createPortal(children(node, id), overlay);
+      })}
+    </>
+  );
 }

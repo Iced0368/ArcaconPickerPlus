@@ -1,32 +1,130 @@
 import { create } from "zustand";
-import { STORAGE_ARCACON_DATA, STORAGE_FAVORITE_DATA, STORAGE_MEMO_DATA } from "../core/constants/config";
-import { getDatabase, loadData, saveData, deleteData, batchSaveData } from "./persistent";
+import { STORAGE_ARCACON_DATA } from "../core/constants/config";
+import { getDatabase, loadData, deleteData, batchSaveData, batchDeleteData } from "./persistent";
+import { removeFavoriteItems } from "./favorite";
+import { removeMemoItems } from "./memo";
 
 import { GenericTable, getEmoticonId } from "../core/utils";
 
 const arcaconIDBTable = getDatabase(STORAGE_ARCACON_DATA);
-const relatedIDBTable = [STORAGE_FAVORITE_DATA, STORAGE_MEMO_DATA].map(getDatabase);
-
-// id가 관련 테이블에 참조되지 않으면 arcacon에서 삭제하는 비동기 함수
-export async function removeArcaconIfUnreferenced(id) {
-  for (const dbTable of relatedIDBTable) {
-    const item = await dbTable.get(id);
-    if (item) {
-      console.log(id, "is still referenced in", dbTable.name);
-      return false; // 참조됨
-    }
-  }
-  // 참조되지 않으면 arcacon에서 삭제
-  await deleteData(arcaconIDBTable, id);
-  return true;
-}
 
 const useArcaconStore = create(() => {
   const arcaconPernamentTable = new GenericTable("id", ["id", "emoticonid", "imageUrl", "type", "poster", "orig"]);
   const arcaconTemporaryTable = new GenericTable("id", ["id", "emoticonid", "imageUrl", "type", "poster", "orig"]);
 
+  function normalizeArcaconItem({ id, emoticonid, imageUrl, type, poster, orig }) {
+    return {
+      id: id?.toString(),
+      emoticonid: emoticonid?.toString(),
+      imageUrl,
+      type,
+      poster,
+      orig,
+    };
+  }
+
+  function syncArcaconItemToMemory(item, permanent = false) {
+    if (permanent) {
+      arcaconPernamentTable.insert(item);
+      if (arcaconTemporaryTable.has(item.id)) {
+        arcaconTemporaryTable.insert(item);
+      }
+      return;
+    }
+
+    arcaconTemporaryTable.insert(item);
+  }
+
+  function removeArcaconItemsFromMemory(ids) {
+    ids.forEach((id) => {
+      arcaconPernamentTable.delete(id);
+      arcaconTemporaryTable.delete(id);
+    });
+  }
+
+  async function setArcaconItems(items, permanent = false) {
+    const normalizedItems = items.map(normalizeArcaconItem).filter((item) => item.id);
+    if (normalizedItems.length === 0) return;
+
+    if (!permanent) {
+      normalizedItems.forEach((item) => syncArcaconItemToMemory(item, false));
+      return;
+    }
+
+    const resolvedItems = await Promise.all(
+      normalizedItems.map(async (item) => {
+        if (item.emoticonid <= 0) {
+          return {
+            ...item,
+            emoticonid: (await getEmoticonId(item.id))?.toString(),
+          };
+        }
+        return item;
+      }),
+    );
+
+    resolvedItems.forEach((item) => syncArcaconItemToMemory(item, true));
+    await batchSaveData(arcaconIDBTable, resolvedItems);
+  }
+
+  async function deleteArcaconItems(ids) {
+    const normalizedIds = ids.map((id) => id?.toString()).filter(Boolean);
+    if (normalizedIds.length === 0) return;
+
+    await Promise.all([removeFavoriteItems(normalizedIds), removeMemoItems(normalizedIds)]);
+    removeArcaconItemsFromMemory(normalizedIds);
+    await batchDeleteData(arcaconIDBTable, normalizedIds);
+  }
+
+  async function refreshArcaconItemsByEmoticonData(emoticonid, arcaconItems) {
+    if (Number(emoticonid) <= 0) return;
+    if (!Array.isArray(arcaconItems) || arcaconItems.length === 0) return;
+
+    const requestedEmoticonId = emoticonid?.toString();
+    const apiItemIds = arcaconItems.map((item) => item?.id?.toString()).filter(Boolean);
+    if (apiItemIds.length === 0) return;
+
+    const currentPackageItems = (await loadData(arcaconIDBTable)).filter(
+      (item) => item?.emoticonid?.toString() === requestedEmoticonId,
+    );
+    const removedItemIds = currentPackageItems
+      .map((item) => item.id?.toString())
+      .filter((id) => id && !apiItemIds.includes(id));
+
+    if (removedItemIds.length > 0) {
+      await deleteArcaconItems(removedItemIds);
+    }
+
+    const existingItems = await arcaconIDBTable.bulkGet(apiItemIds);
+    const itemsToRefresh = arcaconItems.reduce((acc, arcacon, index) => {
+      const existingItem = existingItems[index];
+      if (!existingItem) return acc;
+
+      acc.push({
+        ...existingItem,
+        ...arcacon,
+        id: arcacon.id.toString(),
+        emoticonid: requestedEmoticonId,
+      });
+      return acc;
+    }, []);
+
+    if (itemsToRefresh.length === 0) return;
+
+    await setArcaconItems(itemsToRefresh, true);
+
+    console.log(
+      "[ArcaconPickerPlus] Refreshed arcacon items from emoticon API: ",
+      itemsToRefresh.length,
+      "updated,",
+      removedItemIds.length,
+      "removed.",
+    );
+  }
+
   async function loadArcaconItems() {
-    const data = (await loadData(arcaconIDBTable)) || [];
+    let data = (await loadData(arcaconIDBTable)) || [];
+
     arcaconPernamentTable.load(data);
 
     // 만료된 아카콘 아이템을 확인하고 갱신 요청
@@ -51,20 +149,13 @@ const useArcaconStore = create(() => {
       }
     });
 
-    const arcaconIds = new Set(data.map((item) => item.id.toString()));
-    const arcaconToRefresh = [];
-
     await Promise.all(
       Array.from(expiredEmoticonIds).map((emoticonid) => {
         if (emoticonid <= 0) return;
         return fetch(`/api/emoticon2/${emoticonid}`)
           .then((response) => response.json())
           .then((emoticonData) => {
-            emoticonData.forEach((arcacon) => {
-              if (arcaconIds.has(arcacon.id.toString())) {
-                arcaconToRefresh.push({ ...arcacon, emoticonid: emoticonid.toString() });
-              }
-            });
+            return refreshArcaconItemsByEmoticonData(emoticonid, emoticonData);
           })
           .catch((error) => {
             console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", emoticonid, error);
@@ -72,36 +163,15 @@ const useArcaconStore = create(() => {
       }),
     );
 
-    console.log("[ArcaconPickerPlus] Expired arcacon items to refresh: ", arcaconToRefresh.length);
-    if (arcaconToRefresh.length > 0) {
-      await batchSaveData(arcaconIDBTable, arcaconToRefresh);
-
-      // 갱신된 아이템을 영구 테이블에도 반영
-      arcaconToRefresh.forEach((item) => {
-        arcaconPernamentTable.insert(item);
-      });
-    }
-
     console.log("[ArcaconPickerPlus] Loaded arcacon items: ", data.length, "items loaded.");
   }
 
   async function setArcaconItem({ id, emoticonid, imageUrl, type, poster, orig }, permanent = false) {
-    const item = { id, emoticonid, imageUrl, type, poster, orig };
-
-    if (permanent) {
-      if (item.emoticonid <= 0) {
-        item.emoticonid = await getEmoticonId(id);
-      }
-      arcaconPernamentTable.insert(item);
-      saveData(arcaconIDBTable, item);
-    } else {
-      arcaconTemporaryTable.insert(item);
-    }
+    await setArcaconItems([{ id, emoticonid, imageUrl, type, poster, orig }], permanent);
   }
 
   function deleteArcaconItem(id) {
-    arcaconPernamentTable.delete(id);
-    deleteData(arcaconIDBTable, id);
+    deleteArcaconItems([id]);
   }
 
   async function setPermanent(id) {
@@ -118,10 +188,18 @@ const useArcaconStore = create(() => {
       : arcaconPernamentTable.get(id) || arcaconTemporaryTable.get(id);
   };
 
+  const getArcaconItemsByIds = (ids, permanentOnly = false) => {
+    return ids.map((id) => getArcaconById(id, permanentOnly)).filter(Boolean);
+  };
+
   return {
     loadArcaconItems,
+    refreshArcaconItemsByEmoticonData,
     getArcaconById,
+    getArcaconItemsByIds,
     setArcaconItem,
+    setArcaconItems,
+    deleteArcaconItems,
     setPermanent,
   };
 });
