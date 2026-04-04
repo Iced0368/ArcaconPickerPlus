@@ -6,13 +6,14 @@ export default function MemoController({ openMemo }) {
   useEventListener(
     "contextmenu",
     (e) => {
-      const target = e.target.closest(".thumbnail-wrap");
-      if (!target) return;
-
+      const isTouchBrowser = typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
       const isFavoriteSortMode = document.documentElement.dataset.arcaconFavoriteSortMode === "on";
-      if (isFavoriteSortMode && target.closest(".favorite-thumbnail-wrap")) {
+      if (isTouchBrowser && isFavoriteSortMode) {
         return;
       }
+
+      const target = e.target.closest(".thumbnail-wrap");
+      if (!target) return;
 
       e.preventDefault();
 
