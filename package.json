@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^5.0.1",
     "vite": "^7.3.1",
     "vite-plugin-monkey": "^7.1.1",

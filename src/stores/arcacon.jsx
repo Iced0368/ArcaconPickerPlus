@@ -122,7 +122,39 @@ const useArcaconStore = create(() => {
     );
   }
 
+  async function cleanupInvalidData() {
+    const allData = await loadData(arcaconIDBTable);
+
+    const invalidItems = allData.filter(
+      (item) => !item.id || typeof item.id !== "string" || typeof item.emoticonid !== "string",
+    );
+    if (invalidItems.length === 0) return;
+
+    // 기존 키(정수 등)로 삭제
+    await batchDeleteData(
+      arcaconIDBTable,
+      invalidItems.map((item) => item.id),
+    );
+
+    // string으로 정규화 후 재저장 (id가 없는 항목은 버림)
+    const toResave = invalidItems
+      .map((item) => ({
+        ...item,
+        id: item.id?.toString(),
+        emoticonid: item.emoticonid?.toString(),
+      }))
+      .filter((item) => item.id);
+
+    if (toResave.length > 0) {
+      await batchSaveData(arcaconIDBTable, toResave);
+    }
+
+    console.log("[ArcaconPickerPlus] Cleaned up invalid data: ", invalidItems.length, "items normalized.");
+  }
+
   async function loadArcaconItems() {
+    await cleanupInvalidData();
+
     let data = (await loadData(arcaconIDBTable)) || [];
 
     arcaconPernamentTable.load(data);
@@ -155,7 +187,8 @@ const useArcaconStore = create(() => {
         return fetch(`/api/emoticon2/${emoticonid}`)
           .then((response) => response.json())
           .then((emoticonData) => {
-            return refreshArcaconItemsByEmoticonData(emoticonid, emoticonData);
+            // ContentCollector의 fetchHook에 의해 자동으로 refreshArcaconItemsByEmoticonData가 호출되어 데이터 갱신됨
+            //return refreshArcaconItemsByEmoticonData(emoticonid, emoticonData);
           })
           .catch((error) => {
             console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", emoticonid, error);

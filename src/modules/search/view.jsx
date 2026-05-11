@@ -38,7 +38,9 @@ export default function SearchView({ getInputValue, setInputValue, keyword, getK
           const picker = pickers.find((p) => p.uid === uid);
           if (!picker?.content) return null;
           picker.content.classList.remove("search-only");
+          picker.content.style.minWidth = "";
           if (!kw) return null;
+          picker.content.style.minWidth = picker.content.offsetWidth + "px";
           picker.content.classList.add("search-only");
 
           const searchResult = memoItems.reduce((acc, item) => (item.text.includes(kw) ? [...acc, item] : acc), []);

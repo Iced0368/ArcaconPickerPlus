@@ -19,8 +19,4 @@ ReactDOM.createRoot(
     document.body.append(app);
     return app;
   })(),
-).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+).render(<App />);
