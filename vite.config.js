@@ -22,7 +22,7 @@ export default defineConfig({
         match: ["https://arca.live/*"],
         description: "아카콘 기능 확장",
         license: "MIT",
-        version: "1.2.0",
+        version: "1.2.1",
         "run-at": "document-start",
       },
     }),
