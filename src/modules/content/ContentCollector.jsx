@@ -61,6 +61,7 @@ export default function ContentCollector() {
   });
 
   useEffect(() => {
+    console.log("[ArcaconPickerPlus] Initializing ContentCollector and loading arcacon items...");
     loadArcaconItems();
 
     // MutationObserver로 동적 생성 감지

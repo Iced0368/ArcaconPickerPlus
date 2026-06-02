@@ -7,6 +7,7 @@ import { removeMemoItems } from "./memo";
 import { GenericTable, getEmoticonId } from "../core/utils";
 
 const arcaconIDBTable = getDatabase(STORAGE_ARCACON_DATA);
+const EXPIRED_ITEM_REFRESH_INTERVAL_MS = 300;
 
 const useArcaconStore = create(() => {
   const arcaconPernamentTable = new GenericTable("id", ["id", "emoticonid", "imageUrl", "type", "poster", "orig"]);
@@ -181,20 +182,25 @@ const useArcaconStore = create(() => {
       }
     });
 
-    await Promise.all(
-      Array.from(expiredEmoticonIds).map((emoticonid) => {
-        if (emoticonid <= 0) return;
-        return fetch(`/api/emoticon2/${emoticonid}`)
-          .then((response) => response.json())
-          .then((emoticonData) => {
-            // ContentCollector의 fetchHook에 의해 자동으로 refreshArcaconItemsByEmoticonData가 호출되어 데이터 갱신됨
-            //return refreshArcaconItemsByEmoticonData(emoticonid, emoticonData);
-          })
-          .catch((error) => {
-            console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", emoticonid, error);
-          });
-      }),
-    );
+    console.log("[ArcaconPickerPlus] Found expired arcacon items: ", expiredEmoticonIds.size, "items need refresh.");
+
+    const expiredEmoticonIdList = Array.from(expiredEmoticonIds).filter((emoticonid) => emoticonid > 0);
+
+    for (const [index, emoticonid] of expiredEmoticonIdList.entries()) {
+      try {
+        const response = await fetch(`/api/emoticon2/${emoticonid}`);
+        await response.json();
+
+        // ContentCollector의 fetchHook에 의해 자동으로 refreshArcaconItemsByEmoticonData가 호출되어 데이터 갱신됨
+        // await refreshArcaconItemsByEmoticonData(emoticonid, emoticonData);
+      } catch (error) {
+        console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", emoticonid, error);
+      }
+
+      if (index < expiredEmoticonIdList.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, EXPIRED_ITEM_REFRESH_INTERVAL_MS));
+      }
+    }
 
     console.log("[ArcaconPickerPlus] Loaded arcacon items: ", data.length, "items loaded.");
   }
