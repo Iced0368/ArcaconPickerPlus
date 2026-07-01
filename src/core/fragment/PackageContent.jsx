@@ -1,4 +1,13 @@
+import { useArcaconStore } from "../../stores";
+
 export default function PackageContent({ title, items }) {
+  const { refreshArcaconItemsByEmoticonId } = useArcaconStore();
+
+  const handleMediaError = (emoticonid) => {
+    if (!emoticonid) return;
+    void refreshArcaconItemsByEmoticonId(emoticonid);
+  };
+
   return (
     <>
       <span className="package-title">{title}</span>
@@ -28,6 +37,7 @@ export default function PackageContent({ title, items }) {
                   loop
                   muted
                   playsInline
+                  onError={() => handleMediaError(fav.emoticonid)}
                 ></video>
               ) : (
                 <img
@@ -36,6 +46,7 @@ export default function PackageContent({ title, items }) {
                   src={fav.imageUrl || ""}
                   data-emoticonid={fav.emoticonid || ""}
                   data-attachmentid={fav.id || ""}
+                  onError={() => handleMediaError(fav.emoticonid)}
                 />
               )}
             </div>

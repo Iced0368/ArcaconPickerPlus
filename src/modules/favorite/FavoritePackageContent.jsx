@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { useArcaconStore } from "../../stores";
 
 export default function FavoritePackageContent({ title, items, onReorder, isSortMode }) {
   const [selectedId, setSelectedId] = useState(null);
   const suppressClickRef = useRef(false);
+  const { refreshArcaconItemsByEmoticonId } = useArcaconStore();
+
+  const handleMediaError = (emoticonid) => {
+    if (!emoticonid) return;
+    void refreshArcaconItemsByEmoticonId(emoticonid);
+  };
 
   const resetDragState = () => {
     setSelectedId(null);
@@ -115,6 +122,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   loop
                   muted
                   playsInline
+                  onError={() => handleMediaError(item.emoticonid)}
                 ></video>
               ) : (
                 <img
@@ -123,6 +131,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   src={item.imageUrl || ""}
                   data-emoticonid={item.emoticonid || ""}
                   data-attachmentid={item.id || ""}
+                  onError={() => handleMediaError(item.emoticonid)}
                 />
               )}
               {isDragging && <div className="favorite-sort-badge">선택됨</div>}

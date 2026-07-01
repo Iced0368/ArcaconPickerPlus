@@ -8,10 +8,17 @@ import { GenericTable, getEmoticonId } from "../core/utils";
 
 const arcaconIDBTable = getDatabase(STORAGE_ARCACON_DATA);
 const EXPIRED_ITEM_REFRESH_INTERVAL_MS = 300;
+const BROKEN_ITEM_REFRESH_COOLDOWN_MS = 5000;
 
-const useArcaconStore = create(() => {
+const useArcaconStore = create((set, get) => {
   const arcaconPernamentTable = new GenericTable("id", ["id", "emoticonid", "imageUrl", "type", "poster", "orig"]);
   const arcaconTemporaryTable = new GenericTable("id", ["id", "emoticonid", "imageUrl", "type", "poster", "orig"]);
+  const refreshInFlightByEmoticonId = new Map();
+  const refreshRequestedAtByEmoticonId = new Map();
+
+  function notifyArcaconItemsChanged() {
+    set((state) => ({ revision: state.revision + 1 }));
+  }
 
   function normalizeArcaconItem({ id, emoticonid, imageUrl, type, poster, orig }) {
     return {
@@ -49,6 +56,7 @@ const useArcaconStore = create(() => {
 
     if (!permanent) {
       normalizedItems.forEach((item) => syncArcaconItemToMemory(item, false));
+      notifyArcaconItemsChanged();
       return;
     }
 
@@ -66,6 +74,7 @@ const useArcaconStore = create(() => {
 
     resolvedItems.forEach((item) => syncArcaconItemToMemory(item, true));
     await batchSaveData(arcaconIDBTable, resolvedItems);
+    notifyArcaconItemsChanged();
   }
 
   async function deleteArcaconItems(ids) {
@@ -75,6 +84,41 @@ const useArcaconStore = create(() => {
     await Promise.all([removeFavoriteItems(normalizedIds), removeMemoItems(normalizedIds)]);
     removeArcaconItemsFromMemory(normalizedIds);
     await batchDeleteData(arcaconIDBTable, normalizedIds);
+    notifyArcaconItemsChanged();
+  }
+
+  async function refreshArcaconItemsByEmoticonId(emoticonid, { force = false } = {}) {
+    const normalizedEmoticonId = emoticonid?.toString();
+    if (!normalizedEmoticonId || Number(normalizedEmoticonId) <= 0) return;
+
+    if (refreshInFlightByEmoticonId.has(normalizedEmoticonId)) {
+      return refreshInFlightByEmoticonId.get(normalizedEmoticonId);
+    }
+
+    const lastRequestedAt = refreshRequestedAtByEmoticonId.get(normalizedEmoticonId) || 0;
+    const nowMs = Date.now();
+
+    if (!force && nowMs - lastRequestedAt < BROKEN_ITEM_REFRESH_COOLDOWN_MS) {
+      return;
+    }
+
+    refreshRequestedAtByEmoticonId.set(normalizedEmoticonId, nowMs);
+
+    const refreshTask = (async () => {
+      try {
+        const response = await fetch(`/api/emoticon2/${normalizedEmoticonId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", normalizedEmoticonId, error);
+      } finally {
+        refreshInFlightByEmoticonId.delete(normalizedEmoticonId);
+      }
+    })();
+
+    refreshInFlightByEmoticonId.set(normalizedEmoticonId, refreshTask);
+    return refreshTask;
   }
 
   async function refreshArcaconItemsByEmoticonData(emoticonid, arcaconItems) {
@@ -187,15 +231,7 @@ const useArcaconStore = create(() => {
     const expiredEmoticonIdList = Array.from(expiredEmoticonIds).filter((emoticonid) => emoticonid > 0);
 
     for (const [index, emoticonid] of expiredEmoticonIdList.entries()) {
-      try {
-        const response = await fetch(`/api/emoticon2/${emoticonid}`);
-        await response.json();
-
-        // ContentCollector의 fetchHook에 의해 자동으로 refreshArcaconItemsByEmoticonData가 호출되어 데이터 갱신됨
-        // await refreshArcaconItemsByEmoticonData(emoticonid, emoticonData);
-      } catch (error) {
-        console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", emoticonid, error);
-      }
+      await refreshArcaconItemsByEmoticonId(emoticonid, { force: true });
 
       if (index < expiredEmoticonIdList.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, EXPIRED_ITEM_REFRESH_INTERVAL_MS));
@@ -203,6 +239,7 @@ const useArcaconStore = create(() => {
     }
 
     console.log("[ArcaconPickerPlus] Loaded arcacon items: ", data.length, "items loaded.");
+    notifyArcaconItemsChanged();
   }
 
   async function setArcaconItem({ id, emoticonid, imageUrl, type, poster, orig }, permanent = false) {
@@ -232,7 +269,9 @@ const useArcaconStore = create(() => {
   };
 
   return {
+    revision: 0,
     loadArcaconItems,
+    refreshArcaconItemsByEmoticonId,
     refreshArcaconItemsByEmoticonData,
     getArcaconById,
     getArcaconItemsByIds,
