@@ -3,6 +3,7 @@ import { useElementStore, useArcaconStore } from "../../stores";
 import { useEventListener, useFetchHook } from "../../hooks";
 import { originalFetch } from "../../hooks/useFetchHook";
 import { getThumbnailArcaconItem } from "../../core/utils";
+import { ARCACON_INTERNAL_REFRESH_REQUEST_FLAG } from "../../core/constants/config";
 
 // .arcaconPicker 요소를 감지해 store에 저장하는 컴포넌트
 export default function ContentCollector() {
@@ -44,6 +45,10 @@ export default function ContentCollector() {
   );
 
   useFetchHook(/\/api\/emoticon2\/(\d+)(?:\?|$)/, async (args, emoticonid) => {
+    if (args[1]?.[ARCACON_INTERNAL_REFRESH_REQUEST_FLAG]) {
+      return originalFetch.apply(this, args);
+    }
+
     const response = await originalFetch.apply(this, args);
 
     try {

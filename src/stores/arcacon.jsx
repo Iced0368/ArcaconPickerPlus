@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { STORAGE_ARCACON_DATA } from "../core/constants/config";
+import { ARCACON_INTERNAL_REFRESH_REQUEST_FLAG, STORAGE_ARCACON_DATA } from "../core/constants/config";
 import { getDatabase, loadData, deleteData, batchSaveData, batchDeleteData } from "./persistent";
 import { removeFavoriteItems } from "./favorite";
 import { removeMemoItems } from "./memo";
@@ -106,10 +106,15 @@ const useArcaconStore = create((set, get) => {
 
     const refreshTask = (async () => {
       try {
-        const response = await fetch(`/api/emoticon2/${normalizedEmoticonId}`);
+        const response = await fetch(`/api/emoticon2/${normalizedEmoticonId}`, {
+          [ARCACON_INTERNAL_REFRESH_REQUEST_FLAG]: true,
+        });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
+
+        const responseData = await response.clone().json();
+        await refreshArcaconItemsByEmoticonData(normalizedEmoticonId, responseData);
       } catch (error) {
         console.error("[ArcaconPickerPlus] Failed to refresh arcacon item: ", normalizedEmoticonId, error);
       } finally {

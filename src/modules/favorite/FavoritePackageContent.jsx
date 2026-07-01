@@ -6,7 +6,8 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
   const suppressClickRef = useRef(false);
   const { refreshArcaconItemsByEmoticonId } = useArcaconStore();
 
-  const handleMediaError = (emoticonid) => {
+  const handleMediaError = (item) => {
+    const emoticonid = item?.emoticonid;
     if (!emoticonid) return;
     void refreshArcaconItemsByEmoticonId(emoticonid);
   };
@@ -122,7 +123,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   loop
                   muted
                   playsInline
-                  onError={() => handleMediaError(item.emoticonid)}
+                  onError={() => handleMediaError(item)}
                 ></video>
               ) : (
                 <img
@@ -131,7 +132,7 @@ export default function FavoritePackageContent({ title, items, onReorder, isSort
                   src={item.imageUrl || ""}
                   data-emoticonid={item.emoticonid || ""}
                   data-attachmentid={item.id || ""}
-                  onError={() => handleMediaError(item.emoticonid)}
+                  onError={() => handleMediaError(item)}
                 />
               )}
               {isDragging && <div className="favorite-sort-badge">선택됨</div>}
