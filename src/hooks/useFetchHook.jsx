@@ -10,7 +10,8 @@ function patchFetch() {
   const globalObj = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
   originalFetch = globalObj.fetch;
   globalObj.fetch = async function (...args) {
-    const url = args[0]?.url || args[0];
+    // string, Request, URL 객체 모두 문자열로 정규화
+    const url = String(args[0]?.url ?? args[0] ?? "");
     let result;
     for (const { pattern, callback } of fetchHookRegistry) {
       if (typeof pattern === "string" && url === pattern) {

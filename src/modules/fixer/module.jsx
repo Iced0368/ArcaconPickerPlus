@@ -14,10 +14,12 @@ export default function FixerModule() {
   useFetchHook(/\/b\/([^/]+)\/\d+\/comment/, async (args) => {
     const body = args[1]?.body;
 
-    let parsed = {};
-    if (typeof body === "string" && body.includes("=")) {
-      parsed = Object.fromEntries(new URLSearchParams(body));
+    // URL-encoded 문자열 본문이 아니면 원본 요청 그대로 전송
+    if (typeof body !== "string" || !body.includes("=")) {
+      return originalFetch.apply(this, args);
     }
+
+    const parsed = Object.fromEntries(new URLSearchParams(body));
 
     // 아카콘 단일
     if (parsed.contentType === "emoticon") {
@@ -40,15 +42,15 @@ export default function FixerModule() {
     else if (parsed.contentType === "combo_emoticon") {
       const combolist = JSON.parse(parsed.combolist).map((item) => ({ id: item[1], emoticonid: item[0] }));
 
-      for (const { id, emoticonid } of combolist) {
-        if (emoticonid <= 0) {
+      for (const item of combolist) {
+        if (item.emoticonid <= 0) {
           // 유효하지 않은 emoticonid인 경우 arcacon 테이블 수정
-          const arcaconItem = getArcaconById(id, true);
+          const arcaconItem = getArcaconById(item.id, true);
           if (arcaconItem) {
-            arcaconItem.emoticonid = await getEmoticonId(id);
+            arcaconItem.emoticonid = await getEmoticonId(item.id);
             setArcaconItem(arcaconItem, true);
             // 요청 파라미터 수정
-            combolist.emoticonid = arcaconItem.emoticonid;
+            item.emoticonid = arcaconItem.emoticonid;
           }
         }
       }
