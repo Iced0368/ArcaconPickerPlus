@@ -1,4 +1,13 @@
-import { ContentCollector, FavoriteModule, MemoModule, FixerModule, SearchModule, ThumbnailOverlay } from "./modules";
+import {
+  ContentCollector,
+  FavoriteModule,
+  MemoModule,
+  FixerModule,
+  SearchModule,
+  ThumbnailOverlay,
+  BackupModule,
+  FrequentModule,
+} from "./modules";
 
 function App() {
   return (
@@ -7,9 +16,11 @@ function App() {
       <ThumbnailOverlay />
 
       <FavoriteModule />
+      <FrequentModule />
       <MemoModule />
       <SearchModule />
       <FixerModule />
+      <BackupModule />
     </>
   );
 }

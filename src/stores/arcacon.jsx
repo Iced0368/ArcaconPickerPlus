@@ -3,6 +3,7 @@ import { ARCACON_INTERNAL_REFRESH_REQUEST_FLAG, STORAGE_ARCACON_DATA } from "../
 import { getDatabase, loadData, deleteData, batchSaveData, batchDeleteData } from "./persistent";
 import { removeFavoriteItems } from "./favorite";
 import { removeMemoItems } from "./memo";
+import { removeUsageItems } from "./usage";
 
 import { GenericTable, getEmoticonId } from "../core/utils";
 
@@ -81,7 +82,11 @@ const useArcaconStore = create((set, get) => {
     const normalizedIds = ids.map((id) => id?.toString()).filter(Boolean);
     if (normalizedIds.length === 0) return;
 
-    await Promise.all([removeFavoriteItems(normalizedIds), removeMemoItems(normalizedIds)]);
+    await Promise.all([
+      removeFavoriteItems(normalizedIds),
+      removeMemoItems(normalizedIds),
+      removeUsageItems(normalizedIds),
+    ]);
     removeArcaconItemsFromMemory(normalizedIds);
     await batchDeleteData(arcaconIDBTable, normalizedIds);
     notifyArcaconItemsChanged();
