@@ -7,6 +7,8 @@ import SearchInputFragment from "./fragment/SearchInputFragment";
 import { PickerAheadPortalList } from "../../core/utils";
 import { createPortal } from "react-dom";
 
+const removeWhitespace = (text) => (text || "").replace(/\s+/g, "");
+
 export default function SearchView({ getInputValue, setInputValue, keyword, getKeyword, setKeyword }) {
   const { pickers } = useElementStore();
   const { memoItems } = useMemoStore();
@@ -43,7 +45,11 @@ export default function SearchView({ getInputValue, setInputValue, keyword, getK
           picker.content.style.minWidth = picker.content.offsetWidth + "px";
           picker.content.classList.add("search-only");
 
-          const searchResult = memoItems.reduce((acc, item) => (item.text.includes(kw) ? [...acc, item] : acc), []);
+          // 띄어쓰기 무시 검색
+          const normalizedKeyword = removeWhitespace(kw);
+          const searchResult = normalizedKeyword
+            ? memoItems.filter((item) => removeWhitespace(item.text).includes(normalizedKeyword))
+            : [];
           const searchResultItems = getArcaconItemsByIds(searchResult.map((item) => item.id));
 
           return createPortal(
