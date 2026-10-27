@@ -10,7 +10,7 @@ import FavoritePackageContent from "./FavoritePackageContent";
 
 import "./arcacon-favorite-icon.css";
 import useFavoriteStore from "../../stores/favorite";
-import { PickerAheadPortalList } from "../../core/utils";
+import { PickerAheadPortalList, getFirstNativeChild } from "../../core/utils";
 
 const STAR_SVG_DATA_URL =
   "data:image/svg+xml;utf8," +
@@ -39,7 +39,7 @@ export default function FavoriteView({ pickers }) {
         // 아카콘 패키지 선택 버튼
         <PickerAheadPortalList
           pickers={pickers}
-          getTarget={(picker) => picker.optionsToolbar?.firstChild}
+          getTarget={(picker) => getFirstNativeChild(picker.optionsToolbar)}
           getKey={(picker) => `sort-toggle-${picker.uid}`}
           getPortalProps={() => ({
             fragment: "label",
@@ -63,7 +63,7 @@ export default function FavoriteView({ pickers }) {
         // 아카콘 패키지 선택 버튼
         <PickerAheadPortalList
           pickers={pickers}
-          getTarget={(picker) => picker.content?.firstChild}
+          getTarget={(picker) => getFirstNativeChild(picker.content)}
           getKey={(picker) => `content-${picker.uid}`}
           getPortalProps={() => ({
             className: "--package-wrap",
@@ -83,7 +83,7 @@ export default function FavoriteView({ pickers }) {
         // 아카콘 패키지 아이템 표시
         <PickerAheadPortalList
           pickers={pickers}
-          getTarget={(picker) => picker.sidebar?.firstChild}
+          getTarget={(picker) => getFirstNativeChild(picker.sidebar)}
           getKey={(picker) => `item-${picker.uid}`}
           getPortalProps={() => ({
             className: "package-item",
