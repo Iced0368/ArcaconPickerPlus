@@ -1,4 +1,8 @@
 .arcacon-backup-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
   margin-left: 8px;
   padding: 2px 8px;
   font-size: 12px;
@@ -13,6 +17,18 @@
 
 .arcacon-backup-button:hover {
   background: #f0f1f3;
+}
+
+/* 좁은 화면에서는 아이콘만 표시해 제목 줄이 밀리지 않도록 */
+@media screen and (max-width: 576px) {
+  .arcacon-backup-button {
+    margin-left: 4px;
+    padding: 3px;
+  }
+
+  .arcacon-backup-button-label {
+    display: none;
+  }
 }
 
 .backup-section {

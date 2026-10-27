@@ -3,6 +3,8 @@ import { useElementStore } from "../../stores";
 import { PickerPortalList } from "../../core/utils";
 import BackupFragment from "./fragment/BackupFragment";
 
+import BackupIcon from "../../assets/backup-icon.svg?react";
+
 import "./view.css";
 
 // title-area에서 "아카콘" 텍스트로 시작하는 span (버튼을 안쪽에 붙이므로 첫 텍스트 노드로 판별)
@@ -33,13 +35,16 @@ export default function BackupModule() {
           <button
             type="button"
             className="arcacon-backup-button"
+            title="백업/복원"
+            aria-label="백업/복원"
             onClick={(e) => {
               // title-area에 걸린 사이트 핸들러로 이벤트가 전달되지 않도록
               e.stopPropagation();
               setVisible(true);
             }}
           >
-            백업/복원
+            <BackupIcon />
+            <span className="arcacon-backup-button-label">백업/복원</span>
           </button>
         )}
       />
