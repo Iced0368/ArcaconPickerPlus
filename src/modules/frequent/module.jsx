@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useArcaconStore, useElementStore, useUsageStore } from "../../stores";
+import { useArcaconStore, useElementStore, useSettingsStore, useUsageStore } from "../../stores";
 import { useFetchHook } from "../../hooks";
 import { PackageContent, PackageItem } from "../../core/fragment";
 import { PickerAheadPortalList, getFirstNativeChild } from "../../core/utils";
@@ -59,6 +59,10 @@ export default function FrequentModule() {
     void recordUsage(ids);
   });
 
+  const { showFrequentPackage } = useSettingsStore((state) => state.settings);
+  // 탭을 꺼도 사용 기록은 계속 집계하고, 포털은 유지한 채 숨김 클래스만 적용
+  const hiddenClass = showFrequentPackage ? "" : " arcacon-hidden";
+
   const frequentItems = getArcaconItemsByIds(usageItems.map((item) => item.id)).slice(0, FREQUENT_DISPLAY_LIMIT);
 
   return (
@@ -68,7 +72,7 @@ export default function FrequentModule() {
         getTarget={(picker) => getFirstNativeChild(picker.content)}
         getKey={(picker) => `frequent-content-${picker.uid}`}
         getPortalProps={() => ({
-          className: "--package-wrap",
+          className: "--package-wrap" + hiddenClass,
           "data-package-id": FREQUENT_PACKAGE_ID,
         })}
         render={() => <PackageContent title="자주 씀" items={frequentItems} />}
@@ -78,7 +82,7 @@ export default function FrequentModule() {
         getTarget={(picker) => getFirstNativeChild(picker.sidebar)}
         getKey={(picker) => `frequent-item-${picker.uid}`}
         getPortalProps={() => ({
-          className: "package-item",
+          className: "package-item" + hiddenClass,
           "data-package-id": FREQUENT_PACKAGE_ID,
           "data-package-name": "자주 씀",
           title: "자주 씀",

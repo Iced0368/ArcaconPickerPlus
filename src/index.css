@@ -45,3 +45,8 @@
 .options-toolbar {
   margin-left: 20px;
 }
+
+/* 설정에서 끈 탭/요소 (포털은 유지하고 숨김만) */
+.arcacon-hidden {
+  display: none !important;
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PackageItem } from "../../core/fragment";
 import { FAVORITE_PACKAGE_ID } from "../../core/constants/config";
-import { useArcaconStore } from "../../stores";
+import { useArcaconStore, useSettingsStore } from "../../stores";
 import { getThumbnailAttachmentId } from "../../core/utils";
 import { ThumbnailOverlayPortal } from "../content/ThumbnailOverlay";
 
@@ -21,9 +21,17 @@ const STAR_SVG_DATA_URL =
 export default function FavoriteView({ pickers }) {
   const { favorites, isFavorite, reorderFavoriteItems } = useFavoriteStore();
   const { getArcaconItemsByIds } = useArcaconStore();
+  const { showFavoritePackage } = useSettingsStore((state) => state.settings);
   const [isSortMode, setIsSortMode] = useState(false);
 
   const favoriteItems = getArcaconItemsByIds(favorites.map((fav) => fav.id));
+  // 탭을 꺼도 포털은 유지하고 숨김 클래스만 적용 (언마운트 시 빈 컨테이너가 DOM에 남음)
+  const hiddenClass = showFavoritePackage ? "" : " arcacon-hidden";
+
+  // 숨긴 상태로 정렬 모드가 켜져 있으면 끌 방법이 없으므로 해제
+  useEffect(() => {
+    if (!showFavoritePackage) setIsSortMode(false);
+  }, [showFavoritePackage]);
 
   useEffect(() => {
     document.documentElement.dataset.arcaconFavoriteSortMode = isSortMode ? "on" : "off";
@@ -43,7 +51,7 @@ export default function FavoriteView({ pickers }) {
           getKey={(picker) => `sort-toggle-${picker.uid}`}
           getPortalProps={() => ({
             fragment: "label",
-            className: "option-combo-emoticon visible",
+            className: "option-combo-emoticon visible" + hiddenClass,
             id: "favorite-sort-toggle-button",
           })}
           render={() => (
@@ -66,7 +74,7 @@ export default function FavoriteView({ pickers }) {
           getTarget={(picker) => getFirstNativeChild(picker.content)}
           getKey={(picker) => `content-${picker.uid}`}
           getPortalProps={() => ({
-            className: "--package-wrap",
+            className: "--package-wrap" + hiddenClass,
             "data-package-id": FAVORITE_PACKAGE_ID,
           })}
           render={() => (
@@ -86,7 +94,7 @@ export default function FavoriteView({ pickers }) {
           getTarget={(picker) => getFirstNativeChild(picker.sidebar)}
           getKey={(picker) => `item-${picker.uid}`}
           getPortalProps={() => ({
-            className: "package-item",
+            className: "package-item" + hiddenClass,
             "data-package-id": FAVORITE_PACKAGE_ID,
             "data-package-name": "즐겨찾기",
             title: "즐겨찾기",

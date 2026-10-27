@@ -1,0 +1,97 @@
+.arcacon-settings-button-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 옆의 닫기 버튼(24px 아이콘)과 크기를 맞춤 */
+.arcacon-settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0 4px;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.arcacon-settings-button:hover {
+  opacity: 1;
+}
+
+.settings-group-title {
+  margin: 4px 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-modal-bd, #e0e0e0);
+}
+
+.settings-section-title {
+  font-weight: 700;
+}
+
+.settings-description,
+.settings-warning,
+.settings-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.settings-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.settings-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.backup-file-input {
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.settings-warning,
+.settings-status.error {
+  color: #dc2626;
+}
+
+.settings-status.done {
+  color: #16a34a;
+}
+
+.settings-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fafbfc;
+  color: #333;
+  cursor: pointer;
+}
+
+.settings-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-btn.primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}

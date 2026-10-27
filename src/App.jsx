@@ -5,7 +5,7 @@ import {
   FixerModule,
   SearchModule,
   ThumbnailOverlay,
-  BackupModule,
+  SettingsModule,
   FrequentModule,
 } from "./modules";
 
@@ -20,7 +20,7 @@ function App() {
       <MemoModule />
       <SearchModule />
       <FixerModule />
-      <BackupModule />
+      <SettingsModule />
     </>
   );
 }

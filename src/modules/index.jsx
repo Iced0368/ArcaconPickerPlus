@@ -3,7 +3,7 @@ import FavoriteModule from "./favorite/module";
 import MemoModule from "./memo/module";
 import SearchModule from "./search/module";
 import FixerModule from "./fixer/module";
-import BackupModule from "./backup/module";
+import SettingsModule from "./settings/module";
 import FrequentModule from "./frequent/module";
 
 export {
@@ -14,6 +14,6 @@ export {
   MemoModule,
   SearchModule,
   FixerModule,
-  BackupModule,
+  SettingsModule,
   FrequentModule,
 };
